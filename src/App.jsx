@@ -123,7 +123,7 @@ const Typewriter = ({ text, speed = 30 }) => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in zoom-in duration-1000">
               <div className="w-24 h-24 bg-gradient-to-b from-white to-slate-50 rounded-full flex items-center justify-center shadow-sm border border-slate-100">
-                <span className="text-4xl opacity-70 animate-pulse">🌸</span>
+                <span className="text-4xl opacity-50">🌿</span>
               </div>
               <div className="space-y-2">
                 <h2 className="text-4xl md:text-6xl font-serif text-slate-200 leading-tight">
