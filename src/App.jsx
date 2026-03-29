@@ -8,8 +8,6 @@ export default function App() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false); // New state for analyzer
-  const [stressResult, setStressResult] = useState(null); // New state for result
   const chatRef = useRef(null);
 
   useEffect(() => {
@@ -17,7 +15,7 @@ export default function App() {
       top: chatRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, loading, stressResult]);
+  }, [messages, loading]);
 
   useEffect(() => {
     localStorage.setItem("majestica_chat", JSON.stringify(messages));
@@ -30,7 +28,6 @@ export default function App() {
     setMessages(updated);
     setInput("");
     setLoading(true);
-    setStressResult(null); // Clear previous analysis when new chat starts
 
     try {
       const res = await fetch("https://majestica-1.onrender.com/chat", {
@@ -47,28 +44,8 @@ export default function App() {
     }
   };
 
-  // --- NEW STRESS ANALYZER FUNCTION ---
-  const analyzeStress = async () => {
-    if (messages.length < 2) return;
-    setAnalyzing(true);
-    try {
-      const res = await fetch("https://majestica-1.onrender.com/analyze-stress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ history: messages }),
-      });
-      const data = await res.json();
-      setStressResult(data.analysis);
-    } catch (err) {
-      console.error("Analysis Error:", err);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
   const restoreSession = () => {
     setMessages([]);
-    setStressResult(null);
     localStorage.removeItem("majestica_chat");
   };
 
@@ -81,19 +58,6 @@ export default function App() {
         </h1>
 
         <div className="flex gap-4 items-center">
-          {/* --- STRESS ANALYZER BUTTON --- */}
-          {messages.length >= 2 && (
-            <button
-              onClick={analyzeStress}
-              disabled={analyzing}
-              className={`text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold px-3 py-1 rounded-full border border-indigo-100 transition-all ${
-                analyzing ? "text-indigo-300" : "text-indigo-500 hover:bg-indigo-50"
-              }`}
-            >
-              {analyzing ? "Analyzing..." : "Analyze Stress"}
-            </button>
-          )}
-
           {messages.length > 0 && (
             <button
               onClick={restoreSession}
@@ -114,10 +78,12 @@ export default function App() {
                 <span className="text-4xl opacity-50">🌿</span>
               </div>
               <div className="space-y-2">
-                <h2 className="text-4xl md:text-6xl font-serif text-slate-200 leading-tight">
+                {/* Changed text-slate-200 to text-slate-400 to make it darker */}
+                <h2 className="text-4xl md:text-6xl font-serif text-slate-400 leading-tight">
                   Breath in, <br /> Speak out.
                 </h2>
-                <p className="text-slate-300 font-light text-lg max-w-sm mx-auto">
+                {/* Changed text-slate-300 to text-slate-500 to make it darker */}
+                <p className="text-slate-500 font-light text-lg max-w-sm mx-auto">
                   Your journey to a calmer mind starts with a single word.
                 </p>
               </div>
@@ -133,21 +99,6 @@ export default function App() {
                   </div>
                 </div>
               ))}
-
-              {/* --- STRESS RESULT DISPLAY --- */}
-              {stressResult && (
-                <div className="flex justify-center animate-in zoom-in duration-500">
-                  <div className="w-full bg-indigo-50/50 border border-indigo-100 p-8 rounded-[32px] text-slate-700">
-                    <div className="flex justify-between items-start mb-4">
-                       <span className="text-[10px] uppercase tracking-[0.3em] text-indigo-400 font-bold">Quantum Hackers Analysis</span>
-                       <button onClick={() => setStressResult(null)} className="text-slate-400 hover:text-indigo-500">✕</button>
-                    </div>
-                    <pre className="whitespace-pre-wrap font-sans text-sm md:text-base leading-relaxed">
-                      {stressResult}
-                    </pre>
-                  </div>
-                </div>
-              )}
 
               {loading && (
                 <div className="flex justify-start animate-pulse">
