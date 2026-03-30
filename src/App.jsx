@@ -13,9 +13,16 @@ export default function App() {
     return savedTheme === "dark";
   });
 
+  // Mood Snapshot State
+  const [moodHistory, setMoodHistory] = useState(() => {
+    const savedHistory = localStorage.getItem("majestica_history");
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false); // Toggle for Analysis View
+  const [showSnapshot, setShowSnapshot] = useState(false); // Toggle for Mood Snapshot View
   const chatRef = useRef(null);
 
   // --- STRESS ANALYSIS LOGIC ---
@@ -26,15 +33,11 @@ export default function App() {
     return messages.map((msg, index) => {
       if (msg.role === "user") {
         const foundKeywords = keywords.filter(word => msg.content.toLowerCase().includes(word));
-        // Spike stress based on keywords, otherwise slight natural increase
         currentStress += foundKeywords.length > 0 ? foundKeywords.length * 18 : 5;
       } else {
-        // AI responses (Majestica) gradually reduce stress
         currentStress -= 12; 
       }
-      
       currentStress = Math.max(10, Math.min(100, currentStress));
-      
       return {
         name: `Point ${index + 1}`,
         level: Math.round(currentStress),
@@ -42,8 +45,22 @@ export default function App() {
     });
   }, [messages]);
 
-  // Get the most recent stress percentage
   const currentStressLevel = stressData.length > 0 ? stressData[stressData.length - 1].level : 0;
+
+  // Save Mood Snapshot logic
+  useEffect(() => {
+    if (currentStressLevel > 0) {
+      const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const newEntry = { date: today, level: currentStressLevel };
+      
+      setMoodHistory(prev => {
+        const filtered = prev.filter(item => item.date !== today);
+        const updated = [newEntry, ...filtered].slice(0, 7); // Keep last 7 days
+        localStorage.setItem("majestica_history", JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [currentStressLevel]);
 
   useEffect(() => {
     chatRef.current?.scrollTo({
@@ -63,9 +80,9 @@ export default function App() {
   const sendMessage = async () => {
     if (!input.trim()) return;
     
-    // Check for special command
     if (input.toLowerCase().trim() === "/analyse") {
       setShowAnalysis(true);
+      setShowSnapshot(false);
       setInput("");
       return;
     }
@@ -94,7 +111,10 @@ export default function App() {
   const restoreSession = () => {
     setMessages([]);
     setShowAnalysis(false);
+    setShowSnapshot(false);
     localStorage.removeItem("majestica_chat");
+    localStorage.removeItem("majestica_history");
+    setMoodHistory([]);
   };
 
   return (
@@ -113,12 +133,20 @@ export default function App() {
 
         <div className="flex gap-4 md:gap-6 items-center">
           <button
-            onClick={() => setShowAnalysis(!showAnalysis)}
-            className={`text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold hover:text-indigo-500 transition-colors duration-300 ${
+            onClick={() => { setShowSnapshot(!showSnapshot); setShowAnalysis(false); }}
+            className={`text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold transition-colors duration-300 ${
+              showSnapshot ? "text-indigo-500" : (isDarkMode ? "text-slate-500" : "text-slate-400")
+            }`}
+          >
+            Snapshot
+          </button>
+          <button
+            onClick={() => { setShowAnalysis(!showAnalysis); setShowSnapshot(false); }}
+            className={`text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold transition-colors duration-300 ${
               showAnalysis ? "text-indigo-500" : (isDarkMode ? "text-indigo-400" : "text-indigo-600")
             }`}
           >
-            {showAnalysis ? "Back to Chat" : "Analyse Stress"}
+            {showAnalysis ? "Back" : "Analyse"}
           </button>
           <button
             onClick={restoreSession}
@@ -142,13 +170,29 @@ export default function App() {
       <main ref={chatRef} className="flex-1 overflow-y-auto relative px-4 md:px-0">
         <div className="max-w-3xl mx-auto h-full flex flex-col">
           
-          {showAnalysis ? (
-            // --- ANALYSIS VIEW (MODIFIED FOR IMPACT) ---
+          {showSnapshot ? (
+            // --- DAILY MOOD SNAPSHOT VIEW ---
+            <div className="flex-1 py-12 flex flex-col items-center animate-in fade-in slide-in-from-right-4 duration-500">
+              <h2 className={`text-2xl font-serif mb-8 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Weekly Mood Snapshot</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full px-4">
+                {moodHistory.length > 0 ? moodHistory.map((day, i) => (
+                  <div key={i} className={`p-6 rounded-[32px] text-center border transition-all ${
+                    isDarkMode ? "bg-slate-800/40 border-slate-700" : "bg-white border-slate-100 shadow-sm"
+                  }`}>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-2">{day.date}</p>
+                    <p className={`text-2xl font-bold ${day.level > 60 ? "text-red-400" : "text-indigo-500"}`}>{day.level}%</p>
+                    <p className="text-[9px] text-slate-500 mt-1">Stress Level</p>
+                  </div>
+                )) : (
+                  <div className="col-span-full text-center opacity-40 italic py-10">No history snapshots yet. Start a conversation to track your mood.</div>
+                )}
+              </div>
+            </div>
+          ) : showAnalysis ? (
+            // --- ANALYSIS VIEW ---
             <div className="flex-1 py-12 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="text-center mb-10">
-                <h2 className={`text-3xl font-serif mb-2 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                  Emotional Insights
-                </h2>
+                <h2 className={`text-3xl font-serif mb-2 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Emotional Insights</h2>
                 <div className={`text-5xl font-bold ${currentStressLevel > 60 ? "text-red-400" : "text-indigo-500"}`}>
                   {currentStressLevel}% <span className="text-sm uppercase tracking-widest font-medium text-slate-400">Stress Level</span>
                 </div>
@@ -169,12 +213,7 @@ export default function App() {
                     <XAxis dataKey="name" hide />
                     <YAxis domain={[0, 100]} hide />
                     <Tooltip 
-                      contentStyle={{ 
-                        borderRadius: '24px', 
-                        backgroundColor: isDarkMode ? '#1e293b' : '#fff',
-                        border: 'none',
-                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-                      }}
+                      contentStyle={{ borderRadius: '24px', backgroundColor: isDarkMode ? '#1e293b' : '#fff', border: 'none' }}
                       itemStyle={{ color: '#6366f1', fontWeight: 'bold' }}
                     />
                     <Area type="monotone" dataKey="level" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorLevel)" />
@@ -204,14 +243,10 @@ export default function App() {
               <div className="space-y-2">
                 <h2 className={`text-4xl md:text-6xl font-serif leading-tight transition-colors duration-500 ${
                   isDarkMode ? "text-slate-500" : "text-slate-400"
-                }`}>
-                  Breath in, <br /> Speak out.
-                </h2>
+                }`}>Breath in, <br /> Speak out.</h2>
                 <p className={`font-light text-lg max-w-sm mx-auto transition-colors duration-500 ${
                   isDarkMode ? "text-slate-400" : "text-slate-500"
-                }`}>
-                  Your heart is safe here. Type <span className="font-mono text-indigo-500">/analyse</span> to see your graph.
-                </p>
+                }`}>Your heart is safe here. Type <span className="font-mono text-indigo-500">/analyse</span> to see your graph.</p>
               </div>
             </div>
           ) : (
@@ -220,25 +255,15 @@ export default function App() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 duration-500`}>
                   <div className={`max-w-[85%] md:max-w-[75%] px-6 py-4 rounded-[28px] text-sm md:text-base leading-relaxed shadow-sm transition-all ${
-                    msg.role === "user" 
-                      ? "bg-indigo-500 text-white rounded-tr-none" 
-                      : isDarkMode 
-                        ? "bg-slate-800 border border-slate-700 text-slate-300 rounded-tl-none" 
-                        : "bg-white border border-slate-100 text-slate-600 rounded-tl-none"
+                    msg.role === "user" ? "bg-indigo-500 text-white rounded-tr-none" : isDarkMode ? "bg-slate-800 border border-slate-700 text-slate-300 rounded-tl-none" : "bg-white border border-slate-100 text-slate-600 rounded-tl-none"
                   }`}>
                     {msg.content}
                   </div>
                 </div>
               ))}
               {loading && (
-                <div className="flex justify-start animate-pulse">
-                  <div className={`px-6 py-4 rounded-[28px] rounded-tl-none flex items-center gap-2 border transition-colors duration-500 ${
-                    isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
-                  }`}>
-                    <span className={`text-xs font-medium tracking-widest uppercase transition-colors duration-500 ${
-                      isDarkMode ? "text-slate-500" : "text-slate-300"
-                    }`}>Majestica is reflecting</span>
-                  </div>
+                <div className="flex justify-start animate-pulse px-2">
+                  <span className={`text-[10px] font-bold tracking-[0.2em] uppercase ${isDarkMode ? "text-slate-500" : "text-slate-300"}`}>Majestica is reflecting</span>
                 </div>
               )}
             </div>
@@ -252,18 +277,16 @@ export default function App() {
         <div className="max-w-3xl mx-auto relative">
           <input
             className={`w-full p-5 md:p-6 pr-20 md:pr-24 rounded-[30px] outline-none focus:ring-4 transition-all text-sm md:text-base ${
-              isDarkMode 
-                ? "bg-slate-800 border border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-indigo-900/50 shadow-none" 
-                : "bg-white border border-slate-100 text-slate-700 placeholder:text-slate-400 focus:ring-indigo-50 shadow-2xl shadow-indigo-100/40"
+              isDarkMode ? "bg-slate-800 border border-slate-700 text-slate-200 focus:ring-indigo-900/50" : "bg-white border border-slate-100 text-slate-700 focus:ring-indigo-50 shadow-2xl shadow-indigo-100/40"
             }`}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Share your heart or type /analyse..."
+            placeholder="Share your heart..."
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           />
           <button
             onClick={sendMessage}
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-500 text-white px-5 py-2 md:py-3 rounded-full font-medium hover:bg-indigo-600 transition-all shadow-md active:scale-95"
+            className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-500 text-white px-5 py-2 md:py-3 rounded-full font-medium hover:bg-indigo-600 active:scale-95 transition-all shadow-md"
           >
             Send
           </button>
