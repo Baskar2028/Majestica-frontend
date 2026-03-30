@@ -78,11 +78,9 @@ export default function App() {
                 <span className="text-4xl opacity-50">🌿</span>
               </div>
               <div className="space-y-2">
-                {/* Changed text-slate-200 to text-slate-400 to make it darker */}
                 <h2 className="text-4xl md:text-6xl font-serif text-slate-400 leading-tight">
                   Breath in, <br /> Speak out.
                 </h2>
-                {/* Changed text-slate-300 to text-slate-500 to make it darker */}
                 <p className="text-slate-500 font-light text-lg max-w-sm mx-auto">
                   Your journey to a calmer mind starts with a single word.
                 </p>
@@ -133,7 +131,8 @@ export default function App() {
             Send
           </button>
         </div>
-        <p className="text-center text-[9px] uppercase tracking-[0.3em] text-slate-300 mt-6">
+        {/* Updated text-slate-300 to text-slate-500 for better visibility */}
+        <p className="text-center text-[9px] uppercase tracking-[0.3em] text-slate-500 mt-6">
           Encrypted & Private Sanctuary
         </p>
       </footer>
